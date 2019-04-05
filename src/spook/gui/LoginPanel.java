@@ -1,23 +1,30 @@
 package spook.gui;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.net.InetAddress;
+
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
 import spook.controller.LoginController;
+import spook.encapsulation.data.Encapsulation;
+import spook.security.PasswdHashKod;
+import spook.server.connection.OutputServer;
 import spook.server.connection.ServerConnection;
+import spook.staticNumber.PriorityCode;
+import spook.util.CharacterSeparator;
 import spook.util.SocketInfo;
 import spook.util.WhoAmI;
-
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
 
 public class LoginPanel extends JPanel {
 
 	private JTextField txtUserName;
-	private JTextField txtPasswd;
+	private JPasswordField txtPasswd;
 	private JTextField txtServerIp;
 
 	private JLabel lblNewLabel;
@@ -29,9 +36,20 @@ public class LoginPanel extends JPanel {
 	
 	private LoginController loginController;
 	private ServerConnection serverConnection;
+	private Encapsulation encapsulation;
+	private PasswdHashKod hashKod;
+	private MainFrame mainFrame;
 
 	public LoginPanel() {
 		loginController = new LoginController();
+		encapsulation = new Encapsulation();
+		hashKod = new PasswdHashKod();
+		try {
+			serverConnection = ServerConnection.getServerConnection();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		initialize();
 	}
 
@@ -52,7 +70,7 @@ public class LoginPanel extends JPanel {
 		lblifre.setBounds(78, 188, 89, 14);
 		add(lblifre);
 
-		txtPasswd = new JTextField();
+		txtPasswd = new JPasswordField();
 		txtPasswd.setColumns(10);
 		txtPasswd.setBounds(203, 185, 154, 20);
 		add(txtPasswd);
@@ -70,6 +88,8 @@ public class LoginPanel extends JPanel {
 		btnCancel = new JButton("İptal");
 		btnCancel.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
+				serverConnection.setSenderData(PriorityCode.LogOut);
+				serverConnection.run();
 				System.exit(0);
 			}
 		});
@@ -92,19 +112,31 @@ public class LoginPanel extends JPanel {
 				loginController.checkPasswd(txtPasswd.getText())) {
 			SocketInfo.serverIp = txtServerIp.getText();
 			try {
-				serverConnection = new ServerConnection();
-				//veri transfer formatina cevir
-				//sifre hashle
-				//mesaj sifrele
-				serverConnection.setSenderData(txtUserName.getText()+txtPasswd.getText());
-				serverConnection.start();
-				if(serverConnection.getReceiverData().equals("")) {
+				serverConnection.setSenderData(encapsulation.EncapsulationLogIn(txtUserName.getText(), hashKod.EncryptionPasswd(txtPasswd.getText()),
+						InetAddress.getLocalHost().getHostAddress()));
+				serverConnection.run();
+				new OutputServer().run();
+				System.out.println(serverConnection.getReceiverData());
+				if(serverConnection.getReceiverData().substring(0, 3).equals(PriorityCode.ListReturn)) {
 					WhoAmI.userName = txtUserName.getText();
+					WhoAmI.friendList = serverConnection.getReceiverData().substring(3).split(CharacterSeparator.Separator);
 					//profil name de gir
 					//sohbet ekranina gec
+					getRootPane().removeAll();
+//					removeAll();
+//					mainFrame = new MainFrame();
+//					mainFrame = mainFrame.getMainFrame();
+//					mainFrame.getContentPane().removeAll();
+					ChatPanel chatPanel = ChatPanel.getChatPanel();
+//					mainFrame.getContentPane().add(chatPanel);
+//					add(chatPanel);
+					getRootPane().add(chatPanel);
+					chatPanel.updateUI();
+					chatPanel.setVisible(true);
 				}
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
+				e.printStackTrace();
 				JOptionPane.showMessageDialog(LoginPanel.this, "Bilgileri Kontrol Ederek Giriş Yapınız.");
 			}
 			

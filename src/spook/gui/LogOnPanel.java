@@ -2,36 +2,53 @@ package spook.gui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.net.InetAddress;
 
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
 import spook.controller.LoginController;
+import spook.encapsulation.data.Encapsulation;
+import spook.security.PasswdHashKod;
+import spook.server.connection.OutputServer;
 import spook.server.connection.ServerConnection;
+import spook.staticNumber.PriorityCode;
 import spook.util.SocketInfo;
 import spook.util.WhoAmI;
 
 public class LogOnPanel extends JPanel{
 	
 	private JTextField txtUserName;
-	private JTextField txtPasswd;
-	private JTextField txtServerIp;
+	private JPasswordField txtPasswd;
+	private JTextField txtProfileName;
 
 	private JLabel lblNewLabel;
 	private JLabel lblifre;
-	private JLabel lblServerIp;
+	private JLabel lblProfileName;
 
 	private JButton btnLogon;
 	private JButton btnCancel;
 	
 	private LoginController loginController;
 	private ServerConnection serverConnection;
+	private Encapsulation encapsulation;
+	private JTextField txtIp;
+	private PasswdHashKod hashKod;
 	
 	public LogOnPanel() {
 		loginController = new LoginController();
+		encapsulation = new Encapsulation();
+		hashKod = new PasswdHashKod();
+		try {
+			serverConnection = ServerConnection.getServerConnection();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		initialize();
 	}
 
@@ -52,7 +69,7 @@ public class LogOnPanel extends JPanel{
 		lblifre.setBounds(78, 188, 89, 14);
 		add(lblifre);
 
-		txtPasswd = new JTextField();
+		txtPasswd = new JPasswordField();
 		txtPasswd.setColumns(10);
 		txtPasswd.setBounds(203, 185, 154, 20);
 		add(txtPasswd);
@@ -70,38 +87,46 @@ public class LogOnPanel extends JPanel{
 		btnCancel = new JButton("İptal");
 		btnCancel.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
+				serverConnection.setSenderData(PriorityCode.LogOut);
+				serverConnection.run();
 				System.exit(0);
 			}
 		});
 		btnCancel.setBounds(237, 358, 89, 23);
 		add(btnCancel);
 
-		lblServerIp = new JLabel("Profil Name : ");
-		lblServerIp.setBounds(78, 238, 89, 14);
-		add(lblServerIp);
+		lblProfileName = new JLabel("Profil Name : ");
+		lblProfileName.setBounds(78, 238, 89, 14);
+		add(lblProfileName);
 
-		txtServerIp = new JTextField();
-		txtServerIp.setColumns(10);
-		txtServerIp.setBounds(203, 235, 154, 20);
-		add(txtServerIp);
+		txtProfileName = new JTextField();
+		txtProfileName.setColumns(10);
+		txtProfileName.setBounds(203, 235, 154, 20);
+		add(txtProfileName);
+		
+		JLabel lblIp = new JLabel("Server Ip : ");
+		lblIp.setBounds(78, 286, 89, 14);
+		add(lblIp);
+		
+		txtIp = new JTextField();
+		txtIp.setColumns(10);
+		txtIp.setBounds(203, 283, 154, 20);
+		add(txtIp);
+		
 	}
 
 	protected void btnLogon_ActionPerformed(ActionEvent arg0) {
 		// TODO Auto-generated method stub
 		if( loginController.checkUserName(txtUserName.getText()) && loginController.checkPasswd(txtPasswd.getText())) {
-			SocketInfo.serverIp = txtServerIp.getText();
 			try {
-				serverConnection = new ServerConnection();
-				//veri transfer formatina cevir
-				//sifre hashle
-				//mesaj sifrele
-				serverConnection.setSenderData(txtUserName.getText()+txtPasswd.getText());
-				serverConnection.start();
+				serverConnection.setSenderData(encapsulation.EncapsulationLogOn(txtUserName.getText(), hashKod.EncryptionPasswd(txtPasswd.getText()) ,
+						txtProfileName.getText(), InetAddress.getLocalHost().getHostAddress()));
+				serverConnection.run();
+				new OutputServer().run();
 				serverConnection.close();
 				getRootPane().removeAll();
-				LoginPanel loginPanel = new LoginPanel();
+				MainFrame loginPanel = new MainFrame();
 				getRootPane().add(loginPanel);
-				loginPanel.updateUI();
 				loginPanel.setVisible(true);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
@@ -113,5 +138,4 @@ public class LogOnPanel extends JPanel{
 			JOptionPane.showMessageDialog(LogOnPanel.this, "Girilen Ip Adresi Hatalı");
 		}
 	}
-
 }

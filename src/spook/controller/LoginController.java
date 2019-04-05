@@ -5,7 +5,8 @@ import spook.util.CharacterSeparator;
 public class LoginController {
 	
 	public boolean checkIp(String ip) {
-		if(ip.split(".").length == 4) {
+
+		if(ip.split("\\.").length == 4) {
 			return true;
 		}
 		return false;
